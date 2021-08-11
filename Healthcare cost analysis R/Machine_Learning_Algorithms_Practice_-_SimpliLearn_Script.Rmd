@@ -1,0 +1,384 @@
+---
+title: "Machine Learning Algorithms Practice"
+author: "Shikhar Parashar"
+date: "Aug 04, 2019"
+output:
+  html_document:
+    number_sections: true
+    fig_caption: true
+    toc: true
+    toc_float: true
+    toc_depth: 3
+    fig_width: 6
+    fig_height: 4.5
+    theme: journal
+    highlight: zenburn
+    code_folding: hide
+
+
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+#setwd('/Volumes/Seagate Backup/data/SP1/')
+
+packages <- c('dplyr','caTools','ROCR','rpart','caret','randomForest','e1071','gridExtra','ggpubr','stringr','corrplot','reshape2')
+
+purrr::walk(packages, library, character.only = TRUE, warn.conflicts = FALSE)
+
+Diabs <- read.csv('Diabetes.csv')
+?caret::train()
+```
+
+# Machine Learning Algorithms Practise
+
+This is an R Markdown document for the purpose of Machine Learning Algorithms Practise.
+
+Packages used in this analysis are: 
+
+    1.  caTools: Tools: moving window statistics, GIF, Base64, ROC AUC, etc
+    Contains several basic utility functions including: moving (rolling, running) window statistic functions, read/write for GIF and ENVI binary files, fast calculation of AUC, LogitBoost classifier, base64 encoder/decoder, round-off-error-free sum and cumsum, etc.
+  
+    2.  ROCR: Visualizing the Performance of Scoring Classifiers
+    ROC graphs, sensitivity/specificity curves, lift charts, and precision/recall plots are popular examples of trade-off visualizations for specific pairs of performance measures. ROCR is a flexible tool for creating cutoff-parameterized 2D performance curves by freely combining two from over 25 performance measures (new performance measures can be added using a standard interface). Curves from different cross-validation or bootstrapping runs can be averaged by different methods, and standard deviations, standard errors or box plots can be used to visualize the variability across the runs. The parameterization can be visualized by printing cutoff values at the corresponding curve positions, or by coloring the curve according to cutoff. All components of a performance plot can be quickly adjusted using a flexible parameter dispatching mechanism. Despite its flexibility, ROCR is easy to use, with only three commands and reasonable default values for all optional parameters.
+
+    3.  rpart: Recursive Partitioning and Regression Trees
+    Recursive partitioning for classification, regression and survival trees. An implementation of most of the functionality of the 1984 book by Breiman, Friedman, Olshen and Stone.
+
+    4.  caret: Classification and Regression Training
+    Misc functions for training and plotting classification and regression models.
+    
+    5.  randomForest: Breiman and Cutler's Random Forests for Classification and Regression
+    Classification and regression based on a forest of trees using random inputs, based on Breiman (2001)
+    
+    6.  e1071: Misc Functions of the Department of Statistics, Probability Theory Group (Formerly: E1071), TU Wien
+    Functions for latent class analysis, short time Fourier transform, fuzzy clustering, support vector machines, shortest path computation, bagged clustering, naive Bayes classifier
+
+
+## Dataset used
+
+  The Dataset used for these machine learning algorithms is Diabetes.csv
+
+## Getting familiar with the data
+
+The dataset consist of (R x C):
+
+```{r message = FALSE, warning = FALSE}
+dim(Diabs)
+summary(Diabs)
+```
+
+### Infrences - Getting familiar with the data
+
+From the summary above, it is evident that our taget variable "Is_Diabetic" is categorical and all other variables are continuous variables. Also, 'No.of_times_pregnant' is better suited to be a categorical variable.
+
+```{r message = FALSE, warning = FALSE}
+
+Diabs$No.of_times_pregnant <- as.factor(Diabs$No.of_times_pregnant)
+summary(Diabs)
+
+```
+
+### Visualization
+
+```{r message = FALSE, warning = FALSE}
+
+g1 <- ggplot(Diabs, 
+            aes(x = glucose_conc, fill = Is_Diabetic)) + 
+      geom_density(alpha = 0.5) + 
+      scale_fill_manual(values = c("springgreen","tomato")) +
+      theme(axis.text.x=element_text(angle=25,vjust=0.5),legend.position="none",plot.title=element_text(size=10,hjust=0.5))
+
+g2 <- ggplot(Diabs, 
+            aes(x = blood_pressure, fill = Is_Diabetic)) + 
+      geom_density(alpha = 0.5) + 
+      scale_fill_manual(values = c("springgreen","tomato")) +
+      theme(axis.text.x=element_text(angle=25,vjust=0.5),legend.position="none",plot.title=element_text(size=10,hjust=0.5))
+
+g3 <- ggplot(Diabs, 
+            aes(x = skin_fold_thickness, fill = Is_Diabetic)) + 
+      geom_density(alpha = 0.5) + 
+      scale_fill_manual(values = c("springgreen","tomato")) +
+      theme(axis.text.x=element_text(angle=25,vjust=0.5),legend.position="none",plot.title=element_text(size=10,hjust=0.5))
+
+g4 <- ggplot(Diabs, 
+            aes(x = X2.Hour_serum_insulin, fill = Is_Diabetic)) + 
+      geom_density(alpha = 0.5) + 
+      scale_fill_manual(values = c("springgreen","tomato")) +
+      theme(axis.text.x=element_text(angle=25,vjust=0.5),legend.position="none",plot.title=element_text(size=10,hjust=0.5))
+
+g5 <- ggplot(Diabs, 
+            aes(x = BMI, fill = Is_Diabetic)) + 
+      geom_density(alpha = 0.5) + 
+      scale_fill_manual(values = c("springgreen","tomato")) +
+      theme(axis.text.x=element_text(angle=25,vjust=0.5),legend.position="none",plot.title=element_text(size=10,hjust=0.5))
+
+g6 <- ggplot(Diabs, 
+            aes(x = Age, fill = Is_Diabetic)) + 
+      geom_density(alpha = 0.5) + 
+      scale_fill_manual(values = c("springgreen","tomato")) +
+      theme(axis.text.x=element_text(angle=25,vjust=0.5),legend.position="none",plot.title=element_text(size=10,hjust=0.5))
+
+
+g7 <- ggplot(Diabs, 
+            aes(x = No.of_times_pregnant, fill = Is_Diabetic)) + 
+      geom_density(alpha = 0.5) + 
+      scale_fill_manual(values = c("springgreen","tomato")) +
+      theme(axis.text.x=element_text(angle=25,vjust=0.5),legend.position="none",plot.title=element_text(size=10,hjust=0.5))
+
+ggarrange(g1, g2, g3, g4, g5, g6, ncol = 3, nrow = 3, common.legend = TRUE, legend="bottom")
+
+
+ggplot(Diabs, aes(x = Is_Diabetic, group = No.of_times_pregnant)) +
+geom_bar(aes(y = ..prop.., fill = factor(..x..)), stat = "count") +
+facet_grid(~No.of_times_pregnant) +
+theme(axis.text.x = element_text(angle = 90,vjust = 0.5), legend.position = "none", plot.title = element_text(size = 12, hjust = 0.5), 
+      axis.text.y=element_text(angle=90,vjust=0.5)) +
+labs(x="Is Diabetic?",y="Pregancies",title="Diabeties in Pregnant Women") + 
+geom_text(aes(label = scales::percent(..prop..), y = ..prop.. ),stat= "count",vjust =.45, hjust=1.2, angle=90 ) +
+scale_x_discrete(labels=function(x) str_wrap(x)) +
+scale_fill_manual(values = c("springgreen2","#ff7f93"))
+
+# ggplot(Diabs, aes(Age, No.of_times_pregnant, col = factor(Is_Diabetic))) +
+# geom_point(alpha = 0.3) +
+# scale_colour_manual(values = c("springgreen","#ff193c")) +
+# theme_minimal() +
+# labs(x = "Age",y = "Pregancies",title = "Age and Pregnancies",subtitle = "Impact analysis of Age and #Pregancies on Diabeties",col = "Is Diabetic?") +
+# theme(legend.position = "bottom", plot.title = element_text(size = 16, hjust = 0.5), plot.subtitle = element_text(size = 10))
+
+
+Diabs1 <- Diabs %>% mutate(Is_Diabetic = recode_factor(Is_Diabetic, 'YES' = 1, 'NO' = 0))
+
+Diabs1$Is_Diabetic <- as.integer(as.character(Diabs1$Is_Diabetic))
+Diabs1$No.of_times_pregnant <- as.integer(as.character(Diabs1$No.of_times_pregnant))
+
+Diabs1 %>%
+  cor(.) %>%
+  corrplot(.,type='lower')
+
+
+ggplot(melt(Diabs)) +
+  geom_boxplot(aes(x=paste(variable,Is_Diabetic,sep=" - "), y=value, fill = Is_Diabetic),outlier.colour = "red", outlier.shape = 1) +
+  theme(axis.title.y=element_blank(), axis.title.x=element_blank()) +
+  coord_flip()
+
+```
+
+Spine Plot
+
+```{r SPINEPLT, message=FALSE, warning=FALSE}
+#Diabs$No.of_times_pregnant <- as.factor(Diabs$No.of_times_pregnant)
+spineplot(Diabs$No.of_times_pregnant, Diabs$Is_Diabetic, col = c('green', 'red'))
+
+```
+
+
+### Sampling the Data
+
+Here we create the Testing and Training Dataset with the following dimensions respectively:
+
+```{r message = FALSE, warning = FALSE}
+
+di <- sample.split(Diabs$Is_Diabetic, SplitRatio = .7)
+
+Diabs_Training <- subset(Diabs, di==TRUE)
+Diabs_Testing <- subset(Diabs, di==FALSE)
+
+```
+
+
+
+### Logistic Regression
+
+
+```{r message = FALSE, warning = FALSE}
+
+set.seed(1010)
+
+Model_LogReg_00 <- glm(Is_Diabetic ~ .,data = Diabs_Training, family='binomial')
+
+formula01 <- 'Is_Diabetic ~ No.of_times_pregnant+blood_pressure'
+
+Model_LogReg_01 <- glm(Is_Diabetic ~ No.of_times_pregnant+blood_pressure,data = Diabs_Training, family='binomial')
+
+formula02 <- 'Is_Diabetic ~ No.of_times_pregnant + glucose_conc + blood_pressure + BMI'
+
+
+
+Model_LogReg_02 <- glm(formula02,data = Diabs_Training, family='binomial')
+
+formula03 <- 'Is_Diabetic ~ . -skin_fold_thickness -X2.Hour_serum_insulin -Age '
+Model_LogReg_03 <- glm(formula03,data = Diabs_Training, family='binomial')
+
+summary(Model_LogReg_00)
+summary(Model_LogReg_01)
+summary(Model_LogReg_02)
+summary(Model_LogReg_03)
+
+prediction_LogReg_00 <- predict(Model_LogReg_00, newdata=Diabs_Testing, type='response')
+prediction_LogReg_01 <- predict(Model_LogReg_01, newdata=Diabs_Testing, type='response')
+prediction_LogReg_02 <- predict(Model_LogReg_02, newdata=Diabs_Testing, type='response')
+prediction_LogReg_03 <- predict(Model_LogReg_03, newdata=Diabs_Testing, type='response')
+
+
+table(Diabs_Testing$Is_Diabetic,prediction_LogReg_00>0.4)
+table(Diabs_Testing$Is_Diabetic,prediction_LogReg_01>0.4)
+table(Diabs_Testing$Is_Diabetic,prediction_LogReg_02>0.4)
+table(Diabs_Testing$Is_Diabetic,prediction_LogReg_03>0.4)
+
+tp <- 127
+tn <- 54
+fp <- 23
+fn <- 54
+
+tpr_sensitivity <- tp/(tp+fn)
+tnr_specificy <- tn/(tn+fp)
+
+fpr <- 1 - tpr_sensitivity
+fnr <- 1 - tnr_specificy
+
+#accuracy_log_00 <- times_alog_correct/sum(table(prediction_LogReg_00>0.4, Diabs_Testing$Is_Diabetic))
+#accuracy_log_00 <- sum(true_posi,true_neg) / sum(true_neg,true_posi,false_neg, false_posi)
+
+accuracy_log_00 <- (124+55)/(124+55+25+26)*100
+
+accuracy_log_02 <- (tp+tn)/(tp+tn+fp+fn)*100
+
+```
+
+
+### Decision Trees
+
+
+```{r message=FALSE, warning=FALSE}
+
+Model_DT_00 <- rpart(Is_Diabetic ~ .,data = Diabs_Training)
+Model_DT_02 <- rpart(formula02,data = Diabs_Training)
+
+
+plot(Model_DT_00, margin = .09)
+text(Model_DT_00, use.n=TRUE, pretty = TRUE, cex=0.8)
+
+temp <- Diabs_Training[Diabs_Training$glucose_conc == 197 & Diabs_Training$blood_pressure == 70,]
+
+table(temp$Is_Diabetic)
+
+prediction_DT_00 <- predict(Model_DT_00, newdata = Diabs_Testing, type='class')
+
+CF_DT_00 <- confusionMatrix(table(Diabs_Testing$Is_Diabetic,prediction_DT_00))
+
+prediction_DT_02 <- predict(Model_DT_02, newdata = Diabs_Testing, type='class')
+
+CF_DT_02 <- confusionMatrix(table(Diabs_Testing$Is_Diabetic, prediction_DT_02))
+
+
+
+CF_DT_00
+```
+
+### Random Forest
+
+
+```{r message=FALSE, warning=FALSE}
+
+Model_RF_00 <- randomForest(Is_Diabetic ~ .,data = Diabs_Training)
+?randomForest
+
+Model_RF_00
+
+prediction_RF_00 <- predict(Model_RF_00, newdata = Diabs_Testing, type='class')
+
+CF_RF_00 <- confusionMatrix(table(Diabs_Testing$Is_Diabetic, prediction_RF_00))
+
+CF_RF_00
+```
+
+
+### Navie Bayes
+
+
+```{r message=FALSE, warning=FALSE}
+
+Model_NB_00 <- naiveBayes(Is_Diabetic ~ .,data = Diabs_Training)
+
+prediction_NB_00 <- predict(Model_NB_00, newdata = Diabs_Testing, type='class')
+
+CF_NB_00 <- confusionMatrix(table(Diabs_Testing$Is_Diabetic, prediction_NB_00))
+
+CF_NB_00
+
+```
+
+### Support Vector Machines
+
+
+```{r message=FALSE, warning=FALSE}
+
+Model_SVM_00 <- svm(formula = Is_Diabetic ~ .,data = Diabs_Training, kernel = 'radial', scale = F, cost = 0.1)
+
+summary(Model_SVM_00)
+
+prediction_SVM_00 <- predict(Model_SVM_00, newdata = Diabs_Testing, type='class')
+
+CF_SVM_00 <- confusionMatrix(table(prediction_SVM_00, Diabs_Testing$Is_Diabetic))
+
+CF_SVM_00
+```
+
+## Results
+
+Results of our analysis
+
+```{r echo=TRUE, message=FALSE, warning=FALSE}
+accuracy_log_00 <- .76
+accuracy_log_01 <- .757
+results <- data.frame(formula = c('. (All Variables)'),
+                      Log_Reg = accuracy_log_00*100,
+                      DT = CF_DT_00$overall[1]*100,
+                      RF = CF_RF_00$overall[1]*100,
+                      NB = CF_NB_00$overall[1]*100,
+                      SVM = CF_SVM_00$overall[1]*100)
+
+results$formula <- as.character(results$formula)
+results[2,'formula'] <- formula02
+results[2,"Log_Reg"] <- accuracy_log_01
+results[2,'DT'] <- CF_DT_02$overall[1]*100
+
+results
+
+```
+
+
+
+### SVM Problem as in PPT
+
+```{r echo=TRUE}
+
+summary(iris)
+
+iris_temp <- iris[,-c(1:2)]
+summary(iris_temp)  
+
+
+id<- sample.split(iris_temp$Species, SplitRatio = .7)
+
+iris_temp_train <- subset(iris_temp, id==TRUE)
+iris_temp_test <- subset(iris_temp, id==FALSE)
+
+plot(iris$Petal.Length,iris$Petal.Width, col=iris$Species)
+  
+model_iris_svm <- svm(formula = Species ~ ., data = iris_temp_train, kernel = 'linear')
+
+summary(model_iris_svm)
+
+plot(model_iris_svm, iris_temp)
+
+prediction_SVM_iris <- predict(model_iris_svm, newdata=iris_temp_test[,-3], type='class')
+
+confusionMatrix(prediction_SVM_iris, iris_temp_test$Species)
+
+
+```
+
+
